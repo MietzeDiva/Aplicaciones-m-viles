@@ -17,15 +17,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.appsemestral.model.Candidata
 import com.example.appsemestral.ui.viewmodel.CandidataListViewModel
+import com.example.appsemestral.ui.viewmodel.WeatherUiState
+import com.example.appsemestral.ui.viewmodel.WeatherViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CandidataListScreen(
     viewModel: CandidataListViewModel,
+    weatherViewModel: WeatherViewModel,
     onAgregarClick: () -> Unit,
     onEditarClick: (Candidata) -> Unit
 ) {
     val candidatas by viewModel.candidatas.collectAsState()
+    val weatherState by weatherViewModel.state.collectAsState()
 
     Scaffold(
         topBar = {
@@ -43,11 +47,12 @@ fun CandidataListScreen(
             }
         }
     ) { paddingValues ->
-        if (candidatas.isEmpty()) {
+        Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+            WeatherCard(weatherState, weatherViewModel::refresh)
+            if (candidatas.isEmpty()) {
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
+                    .fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -57,10 +62,7 @@ fun CandidataListScreen(
             }
         } else {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = 16.dp),
+                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(vertical = 16.dp)
             ) {
@@ -71,6 +73,24 @@ fun CandidataListScreen(
                         onEditar = { onEditarClick(candidata) }
                     )
                 }
+            }
+        }
+        }
+    }
+}
+
+@Composable
+private fun WeatherCard(state: WeatherUiState, onRefresh: () -> Unit) {
+    Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        when (state) {
+            WeatherUiState.Loading -> Text("Consultando clima de Santiago…", Modifier.padding(16.dp))
+            is WeatherUiState.Success -> Column(Modifier.padding(16.dp)) {
+                Text("Clima actual en Santiago", fontWeight = FontWeight.Bold)
+                Text("${state.weather.temperature_2m} °C · viento ${state.weather.wind_speed_10m} km/h")
+            }
+            is WeatherUiState.Error -> Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Clima no disponible", Modifier.weight(1f))
+                TextButton(onClick = onRefresh) { Text("Reintentar") }
             }
         }
     }

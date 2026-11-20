@@ -24,6 +24,7 @@ import com.example.appsemestral.ui.viewmodel.CandidataFormViewModel
 import com.example.appsemestral.ui.viewmodel.CandidataListViewModel
 import com.example.appsemestral.ui.viewmodel.EvaluacionViewModel
 import com.example.appsemestral.ui.viewmodel.RankingHistorialViewModel
+import com.example.appsemestral.ui.viewmodel.WeatherViewModel
 import java.util.concurrent.Executor
 
 class MainActivity : FragmentActivity() {
@@ -41,12 +42,14 @@ class MainActivity : FragmentActivity() {
             initializer { CandidataListViewModel(appContainer.candidataRepository) }
             initializer { EvaluacionViewModel(appContainer.candidataRepository) }
             initializer { RankingHistorialViewModel(appContainer.candidataRepository) }
+            initializer { WeatherViewModel(appContainer.weatherRepository) }
         }
     }
     private val formViewModel: CandidataFormViewModel by viewModels { factory }
     private val listViewModel: CandidataListViewModel by viewModels { factory }
     private val evaluacionViewModel: EvaluacionViewModel by viewModels { factory }
     private val rankingViewModel: RankingHistorialViewModel by viewModels { factory }
+    private val weatherViewModel: WeatherViewModel by viewModels { factory }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -72,7 +75,8 @@ class MainActivity : FragmentActivity() {
                             formViewModel = formViewModel,
                             listViewModel = listViewModel,
                             evaluacionViewModel = evaluacionViewModel,
-                            rankingViewModel = rankingViewModel
+                            rankingViewModel = rankingViewModel,
+                            weatherViewModel = weatherViewModel
                         )
                     }
                 }

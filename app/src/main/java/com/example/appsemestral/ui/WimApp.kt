@@ -55,7 +55,8 @@ fun WimApp(
     formViewModel: CandidataFormViewModel,
     listViewModel: CandidataListViewModel,
     evaluacionViewModel: EvaluacionViewModel,
-    rankingViewModel: RankingHistorialViewModel
+    rankingViewModel: RankingHistorialViewModel,
+    weatherViewModel: com.example.appsemestral.ui.viewmodel.WeatherViewModel
 ) {
     // rememberSaveable: la pantalla actual sobrevive a una rotación
     var pantallaActual by rememberSaveable { mutableStateOf(Pantalla.LISTA) }
@@ -106,6 +107,7 @@ fun WimApp(
                 when (pantalla) {
                     Pantalla.LISTA -> CandidataListScreen(
                         viewModel = listViewModel,
+                        weatherViewModel = weatherViewModel,
                         onAgregarClick = {
                             formViewModel.limpiarFormulario()
                             pantallaActual = Pantalla.FORMULARIO

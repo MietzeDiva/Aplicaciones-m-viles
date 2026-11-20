@@ -1,0 +1,4 @@
+storeFile=keystore/wim-release.jks
+storePassword=CAMBIAR_PASSWORD
+keyAlias=wim-release
+keyPassword=CAMBIAR_PASSWORD
