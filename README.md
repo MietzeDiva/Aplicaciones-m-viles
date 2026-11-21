@@ -43,3 +43,73 @@ El APK queda en `app/build/outputs/apk/release/app-release.apk`. La llave y las 
 ## Ejecución
 
 Abrir en Android Studio, sincronizar Gradle, conectar un dispositivo/emulador API 24+ y ejecutar `app`.
+
+
+## Entrega de API, pruebas y APK firmado
+
+### Endpoint de clima
+
+La aplicación utiliza Open-Meteo mediante Retrofit:
+
+`GET https://api.open-meteo.com/v1/forecast`
+
+Parámetros usados para Santiago:
+
+`latitude=-33.4489`
+`longitude=-70.6693`
+`current=temperature_2m,wind_speed_10m,weather_code`
+`timezone=auto`
+
+La API es pública y no requiere API Key.
+
+### Pruebas unitarias
+
+Las pruebas de `CandidataValidator` se encuentran en:
+
+`app/src/test/java/com/example/app_kotlin/CandidataValidatorTest.kt`
+
+Incluyen casos válidos y errores para nombres, correos y teléfonos.
+
+Ejecutar:
+
+```powershell
+.\gradlew.bat :app:testDebugUnitTest
+```
+
+### Compilar y ejecutar en un emulador
+
+1. Abrir el proyecto en Android Studio.
+2. Sincronizar Gradle.
+3. Abrir Device Manager y crear un emulador con API 24 o superior.
+4. Iniciar el emulador.
+5. Seleccionar el módulo `app`.
+6. Presionar **Run**.
+7. Elegir el emulador y esperar la instalación.
+
+También se puede compilar desde PowerShell:
+
+```powershell
+.\gradlew.bat :app:assembleDebug
+```
+
+### APK y llave de firma
+
+La llave de firma se encuentra en:
+
+`keystore/wim-release.jks`
+
+La configuración de firma usa:
+
+`signing.properties`
+
+Las contraseñas y la llave están excluidas mediante `.gitignore`.
+
+Generar la APK release firmada:
+
+```powershell
+.\gradlew.bat :app:assembleRelease
+```
+
+La APK firmada queda disponible en:
+
+`app/build/outputs/apk/release/app-release.apk`
