@@ -13,3 +13,7 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Llaves de firma (no subir al repositorio)
+keystore/
+signing.properties

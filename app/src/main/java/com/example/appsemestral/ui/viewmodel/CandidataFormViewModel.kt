@@ -128,12 +128,16 @@ class CandidataFormViewModel(
                     uriCv = _uriCv.value,
                     registradaPor = "Dirección"
                 )
-                if (idActual == 0) {
-                    repository.registrarCandidata(candidata) // Es nueva
-                } else {
-                    repository.actualizarCandidata(candidata) // Es edición
+                try {
+                    if (idActual == 0) {
+                        repository.registrarCandidata(candidata) // Es nueva
+                    } else {
+                        repository.actualizarCandidata(candidata) // Es edición
+                    }
+                    onExito()
+                } catch (e: Exception) {
+                    onError() // el backend no respondió: la pantalla anima el botón
                 }
-                onExito()
             }
         } else {
             onError() // avisa a la pantalla para que anime el botón

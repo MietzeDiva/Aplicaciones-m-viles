@@ -101,9 +101,13 @@ class EvaluacionViewModel(
                 fecha = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
             )
 
-            repository.guardarEvaluacion(evaluacion)
-            _guardadoExitoso.value = true
-            _mensajeError.value = null
+            try {
+                repository.guardarEvaluacion(evaluacion)
+                _guardadoExitoso.value = true
+                _mensajeError.value = null
+            } catch (e: Exception) {
+                _mensajeError.value = "No se pudo guardar la evaluación. Revisa la conexión con el servidor."
+            }
         }
     }
 

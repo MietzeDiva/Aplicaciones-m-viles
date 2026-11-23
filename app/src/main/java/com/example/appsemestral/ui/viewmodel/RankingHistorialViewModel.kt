@@ -8,6 +8,7 @@ import com.example.appsemestral.model.HistorialAccion
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 class RankingHistorialViewModel(
     private val repository: CandidataRepository
@@ -26,4 +27,8 @@ class RankingHistorialViewModel(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
+
+    init {
+        viewModelScope.launch { repository.refrescarTodo() }
+    }
 }

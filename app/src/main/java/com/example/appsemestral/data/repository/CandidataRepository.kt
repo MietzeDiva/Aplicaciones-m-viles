@@ -1,85 +1,118 @@
 package com.example.appsemestral.data.repository
 
-import com.example.appsemestral.data.local.dao.CandidataDao
-import com.example.appsemestral.data.local.dao.EvaluacionDao
-import com.example.appsemestral.data.local.dao.HistorialDao
+import android.util.Log
+import com.example.appsemestral.data.remote.CandidataApi
+import com.example.appsemestral.data.remote.EvaluacionApi
+import com.example.appsemestral.data.remote.HistorialApi
 import com.example.appsemestral.model.Candidata
 import com.example.appsemestral.model.Evaluacion
 import com.example.appsemestral.model.HistorialAccion
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 class CandidataRepository(
-    private val candidataDao: CandidataDao,
-    private val evaluacionDao: EvaluacionDao,
-    private val historialDao: HistorialDao
+    private val candidataApi: CandidataApi,
+    private val evaluacionApi: EvaluacionApi,
+    private val historialApi: HistorialApi
 ) {
+
+    private val _candidatas = MutableStateFlow<List<Candidata>>(emptyList())
+    private val _ranking = MutableStateFlow<List<Evaluacion>>(emptyList())
+    private val _historial = MutableStateFlow<List<HistorialAccion>>(emptyList())
 
     private fun fechaActual(): String {
         val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
         return sdf.format(Date())
     }
 
-    // --- Candidatas ---
-    fun listarCandidatas(): Flow<List<Candidata>> = candidataDao.listarCandidatas()
+    // Ejecuta una llamada de red sin que la app se caiga si el servidor falla
+    private suspend fun <T> intentar(porDefecto: T, bloque: suspend () -> T): T =
+        try {
+            bloque()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e("WimRepo", "Error de red: ${e.message}", e)
+            porDefecto
+        }
 
-    suspend fun buscarCandidata(id: Int): Candidata? = candidataDao.buscarPorId(id)
+    // --- Refrescar datos desde el backend ---
+    suspend fun refrescarCandidatas() {
+        intentar(Unit) { _candidatas.value = candidataApi.listar() }
+    }
+
+    suspend fun refrescarRanking() {
+        intentar(Unit) { _ranking.value = evaluacionApi.ranking() }
+    }
+
+    suspend fun refrescarHistorial() {
+        intentar(Unit) { _historial.value = historialApi.listar() }
+    }
+
+    suspend fun refrescarTodo() {
+        refrescarCandidatas()
+        refrescarRanking()
+        refrescarHistorial()
+    }
+
+    private suspend fun registrarHistorial(accion: String, descripcion: String) {
+        intentar(Unit) {
+            historialApi.crear(HistorialAccion(accion = accion, descripcion = descripcion, fecha = fechaActual()))
+            refrescarHistorial()
+        }
+    }
+
+    // --- Candidatas (CRUD contra el backend) ---
+    fun listarCandidatas(): Flow<List<Candidata>> = _candidatas.asStateFlow()
+
+    suspend fun buscarCandidata(id: Int): Candidata? = intentar(null) { candidataApi.buscar(id) }
 
     suspend fun registrarCandidata(candidata: Candidata): Long {
-        val id = candidataDao.insertar(candidata)
-        historialDao.insertar(
-            HistorialAccion(
-                accion = "Registro de Candidata",
-                descripcion = "Se registró a la candidata ${candidata.nombre} en el área ${candidata.area}",
-                fecha = fechaActual()
-            )
+        val creada = candidataApi.crear(candidata)
+        registrarHistorial(
+            "Registro de Candidata",
+            "Se registró a la candidata ${candidata.nombre} en el área ${candidata.area}"
         )
-        return id
+        refrescarCandidatas()
+        return creada.id.toLong()
     }
 
     suspend fun actualizarCandidata(candidata: Candidata) {
-        candidataDao.actualizar(candidata)
-        historialDao.insertar(
-            HistorialAccion(
-                accion = "Edición de Candidata",
-                descripcion = "Se actualizaron los datos de ${candidata.nombre}",
-                fecha = fechaActual()
-            )
-        )
+        candidataApi.actualizar(candidata.id, candidata)
+        registrarHistorial("Edición de Candidata", "Se actualizaron los datos de ${candidata.nombre}")
+        refrescarCandidatas()
     }
 
     suspend fun eliminarCandidata(candidata: Candidata) {
-        candidataDao.eliminar(candidata)
-        historialDao.insertar(
-            HistorialAccion(
-                accion = "Eliminación",
-                descripcion = "Se eliminó a la candidata ${candidata.nombre}",
-                fecha = fechaActual()
-            )
-        )
+        candidataApi.eliminar(candidata.id)
+        registrarHistorial("Eliminación", "Se eliminó a la candidata ${candidata.nombre}")
+        refrescarCandidatas()
     }
 
     // --- Evaluaciones WIM ---
-    fun obtenerRanking(): Flow<List<Evaluacion>> = evaluacionDao.obtenerRanking()
+    fun obtenerRanking(): Flow<List<Evaluacion>> = _ranking.asStateFlow()
 
-    suspend fun buscarEvaluacionPorCandidata(candidataId: Int): Evaluacion? {
-        return evaluacionDao.buscarPorCandidataId(candidataId)
-    }
+    suspend fun buscarEvaluacionPorCandidata(candidataId: Int): Evaluacion? =
+        intentar(null) {
+            val respuesta = evaluacionApi.porCandidata(candidataId)
+            if (respuesta.isSuccessful) respuesta.body() else null
+        }
 
     suspend fun guardarEvaluacion(evaluacion: Evaluacion): Long {
-        val id = evaluacionDao.insertar(evaluacion)
-        historialDao.insertar(
-            HistorialAccion(
-                accion = "Evaluación WIM",
-                descripcion = "Se evaluó a ${evaluacion.candidataNombre} con puntaje total ${String.format(Locale.US, "%.2f", evaluacion.totalPonderado)}",
-                fecha = fechaActual()
-            )
+        val creada = evaluacionApi.crear(evaluacion)
+        registrarHistorial(
+            "Evaluación WIM",
+            "Se evaluó a ${evaluacion.candidataNombre} con puntaje total ${String.format(Locale.US, "%.2f", evaluacion.totalPonderado)}"
         )
-        return id
+        refrescarRanking()
+        return creada.id.toLong()
     }
 
     // --- Historial ---
-    fun listarHistorial(): Flow<List<HistorialAccion>> = historialDao.listarHistorial()
+    fun listarHistorial(): Flow<List<HistorialAccion>> = _historial.asStateFlow()
 }
